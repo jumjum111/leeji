@@ -115,7 +115,7 @@ class TPG261Reader:
                 else:
                     print(f"[read] ACK 없음: {resp}")
 
-           except Exception as e:
+            except Exception as e:
                 print(f"[read] 시도 {attempt+1}/3 예외: {e}")
                 traceback.print_exc()
                 self._close_port()
