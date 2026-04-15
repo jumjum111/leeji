@@ -28,7 +28,7 @@ class TPG261Reader:
             print(f"데이터 파싱 에러: {e}")
         return None
 
-    def _open_port(self, timeout=10):
+    def _open_port(self, timeout=30):
         """포트 열기 (타임아웃 적용)"""
         result = [None]
         error = [None]
@@ -71,8 +71,9 @@ class TPG261Reader:
         if self._ser is not None and self._ser.is_open:
             return self._ser
         print("[read] 포트 열기...")
-        time.sleep(1)
         self._ser = self._open_port()
+        if self._ser is not None:
+            time.sleep(1)
         return self._ser
 
     def read_pressure_once(self):
@@ -88,6 +89,8 @@ class TPG261Reader:
 
                 print(f"[read] 시도 {attempt+1}/3 - 포트 열기 성공")
 
+                ser.reset_input_buffer()
+                ser.reset_output_buffer()
                 ser.write(b'\x1B\r\n')
                 time.sleep(0.3)
                 esc_resp = ser.read_all()
@@ -112,10 +115,14 @@ class TPG261Reader:
                 else:
                     print(f"[read] ACK 없음: {resp}")
 
-            except Exception as e:
+           except Exception as e:
                 print(f"[read] 시도 {attempt+1}/3 예외: {e}")
                 traceback.print_exc()
-                self._close_port()  # 에러 시 포트 닫고 다음 시도에서 재연결
+                self._close_port()
+                if attempt < 2:
+                    print(f"[read] 10초 대기 후 재시도...")
+                    time.sleep(10)
+                continue
 
             if attempt < 2:
                 print(f"[read] 5초 대기 후 재시도...")
