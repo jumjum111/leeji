@@ -28,7 +28,7 @@ class TPG261Reader:
             print(f"데이터 파싱 에러: {e}")
         return None
 
-     def _open_port(self, timeout=30):
+    def _open_port(self, timeout=30):
         """포트 열기 (타임아웃 적용)"""
         result = [None]
         error = [None]
