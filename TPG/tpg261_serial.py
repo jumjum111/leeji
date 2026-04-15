@@ -117,7 +117,7 @@ class TPG261Reader:
         print(f"[read] 3회 모두 실패")
         return None
 
-      def _loop(self):
+    def _loop(self):
         first_read = True
         last_insert_time = 0
 
@@ -157,7 +157,6 @@ class TPG261Reader:
                 while self.seconds_until_next > 0 and self.running:
                     time.sleep(1)
                     self.seconds_until_next -= 1
-
 
     def start(self):
         if not self.running:
