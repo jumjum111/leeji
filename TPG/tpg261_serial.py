@@ -28,42 +28,43 @@ class TPG261Reader:
         return None
 
     def _open_port_with_timeout(self, timeout=5):
-    """포트 열기를 별도 스레드로 실행해서 타임아웃 적용"""
-    result = [None]
-    error = [None]
-    lock = threading.Lock()
-    timed_out = [False]
+        """포트 열기..."""    ← 8칸 (함수 안)
+        result = [None]      ← 8칸 (함수 안)
+        error = [None]
+        lock = threading.Lock()
+        timed_out = [False]
 
-    def _open():
-        try:
-            ser = serial.Serial(self.port, self.baudrate, timeout=2)
+        def _open():
+            try:
+                ser = serial.Serial(self.port, self.baudrate, timeout=2)
+                with lock:
+                    if timed_out[0]:
+                        ser.close()
+                    else:
+                        result[0] = ser
+            except Exception as e:
+                error[0] = e
+
+        t = threading.Thread(target=_open)
+        t.daemon = True
+        t.start()
+        t.join(timeout=timeout)
+
+        if t.is_alive():
             with lock:
-                if timed_out[0]:
-                    ser.close()  # 타임아웃 됐으면 즉시 닫기
-                else:
-                    result[0] = ser
-        except Exception as e:
-            error[0] = e
+                timed_out[0] = True
+                if result[0] is not None:
+                    try:
+                        result[0].close()
+                    except:
+                        pass
+            print(f"[read] 포트 열기 타임아웃 ({timeout}초)")
+            return None
+        if error[0]:
+            print(f"[read] 포트 열기 실패: {error[0]}")
+            return None
+        return result[0]
 
-    t = threading.Thread(target=_open)
-    t.daemon = True
-    t.start()
-    t.join(timeout=timeout)
-
-    if t.is_alive():
-        with lock:
-            timed_out[0] = True
-            if result[0] is not None:
-                try:
-                    result[0].close()
-                except:
-                    pass
-        print(f"[read] 포트 열기 타임아웃 ({timeout}초)")
-        return None
-    if error[0]:
-        print(f"[read] 포트 열기 실패: {error[0]}")
-        return None
-    return result[0]
 
 
     def read_pressure_once(self):
