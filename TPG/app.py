@@ -21,7 +21,7 @@ log.setLevel(logging.ERROR)
 app = Flask(__name__)
 
 # TPG261 시리얼 리더 인스턴스 (3분마다 측정)
-tpg_reader = TPG261Reader(port='COM6', baudrate=9600, interval_seconds=180)
+tpg_reader = TPG261Reader(port='COM3', baudrate=9600, interval_seconds=180)
 
 def send_telegram_message(message):
     bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
