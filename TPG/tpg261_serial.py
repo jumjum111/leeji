@@ -89,6 +89,19 @@ class TPG261Reader:
             time.sleep(1)
         return self._ser
 
+    def _keepalive(self):
+        """CH340 슬립 방지용 keepalive"""
+        if self._ser and self._ser.is_open:
+            try:
+                self._ser.reset_input_buffer()
+                self._ser.reset_output_buffer()
+                self._ser.write(b'\x1B\r\n')
+                time.sleep(0.1)
+                self._ser.read_all()
+            except Exception as e:
+                print(f"[keepalive] 실패: {e}")
+                self._close_port()
+
     def read_pressure_once(self):
         print(f"[read] 측정 시도 시작 (포트: {self.port})")
         for attempt in range(3):
@@ -166,9 +179,14 @@ class TPG261Reader:
                         print(f"[측정 성공] {pressure:.3e} Mbar")
 
                     self.seconds_until_next = self.interval
+                    keepalive_counter = 0
                     while self.seconds_until_next > 0 and self.running:
                         time.sleep(1)
                         self.seconds_until_next -= 1
+                        keepalive_counter += 1
+                        if keepalive_counter >= 60:
+                            keepalive_counter = 0
+                            self._keepalive()
                 else:
                     print("측정 실패, 20초 후 재시도...")
                     self.seconds_until_next = 20
