@@ -28,8 +28,8 @@ class TPG261Reader:
         return None
 
     def _open_port_with_timeout(self, timeout=5):
-        """포트 열기..."""    ← 8칸 (함수 안)
-        result = [None]      ← 8칸 (함수 안)
+        """포트 열기..."""    
+        result = [None]     
         error = [None]
         lock = threading.Lock()
         timed_out = [False]
