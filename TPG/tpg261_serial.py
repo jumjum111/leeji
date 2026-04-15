@@ -28,17 +28,23 @@ class TPG261Reader:
             print(f"데이터 파싱 에러: {e}")
         return None
 
-    def _open_port(self, timeout=30):
+     def _open_port(self, timeout=30):
         """포트 열기 (타임아웃 적용)"""
         result = [None]
         error = [None]
+        lock = threading.Lock()
+        timed_out = [False]
 
         def _open():
             try:
                 ser = serial.Serial(self.port, self.baudrate, timeout=2)
-                ser.setDTR(True)
-                ser.setRTS(True)
-                result[0] = ser
+                with lock:
+                    if timed_out[0]:
+                        ser.close()  # 타임아웃됐으면 즉시 닫기
+                    else:
+                        ser.setDTR(True)
+                        ser.setRTS(True)
+                        result[0] = ser
             except Exception as e:
                 error[0] = e
 
@@ -48,6 +54,13 @@ class TPG261Reader:
         t.join(timeout=timeout)
 
         if t.is_alive():
+            with lock:
+                timed_out[0] = True
+                if result[0] is not None:
+                    try:
+                        result[0].close()
+                    except:
+                        pass
             print(f"[read] 포트 열기 타임아웃 ({timeout}초)")
             return None
         if error[0]:
@@ -84,7 +97,7 @@ class TPG261Reader:
                 if ser is None:
                     print(f"[read] 시도 {attempt+1}/3 - 포트 없음, 건너뜀")
                     if attempt < 2:
-                        time.sleep(5)
+                        time.sleep(15)
                     continue
 
                 print(f"[read] 시도 {attempt+1}/3 - 포트 열기 성공")
