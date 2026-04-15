@@ -28,29 +28,43 @@ class TPG261Reader:
         return None
 
     def _open_port_with_timeout(self, timeout=5):
-        """포트 열기를 별도 스레드로 실행해서 타임아웃 적용"""
-        result = [None]
-        error = [None]
+    """포트 열기를 별도 스레드로 실행해서 타임아웃 적용"""
+    result = [None]
+    error = [None]
+    lock = threading.Lock()
+    timed_out = [False]
 
-        def _open():
-            try:
-                ser = serial.Serial(self.port, self.baudrate, timeout=2)
-                result[0] = ser
-            except Exception as e:
-                error[0] = e
+    def _open():
+        try:
+            ser = serial.Serial(self.port, self.baudrate, timeout=2)
+            with lock:
+                if timed_out[0]:
+                    ser.close()  # 타임아웃 됐으면 즉시 닫기
+                else:
+                    result[0] = ser
+        except Exception as e:
+            error[0] = e
 
-        t = threading.Thread(target=_open)
-        t.daemon = True
-        t.start()
-        t.join(timeout=timeout)
+    t = threading.Thread(target=_open)
+    t.daemon = True
+    t.start()
+    t.join(timeout=timeout)
 
-        if t.is_alive():
-            print(f"[read] 포트 열기 타임아웃 ({timeout}초)")
-            return None
-        if error[0]:
-            print(f"[read] 포트 열기 실패: {error[0]}")
-            return None
-        return result[0]
+    if t.is_alive():
+        with lock:
+            timed_out[0] = True
+            if result[0] is not None:
+                try:
+                    result[0].close()
+                except:
+                    pass
+        print(f"[read] 포트 열기 타임아웃 ({timeout}초)")
+        return None
+    if error[0]:
+        print(f"[read] 포트 열기 실패: {error[0]}")
+        return None
+    return result[0]
+
 
     def read_pressure_once(self):
         print(f"[read] 측정 시도 시작 (포트: {self.port})")
