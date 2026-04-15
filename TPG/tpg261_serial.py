@@ -13,6 +13,7 @@ class TPG261Reader:
         self.thread = None
         self.latest_pressure = 0.0
         self.seconds_until_next = interval_seconds
+        self._ser = None  # 포트를 계속 유지
 
     def parse_value(self, data_str):
         try:
@@ -27,21 +28,17 @@ class TPG261Reader:
             print(f"데이터 파싱 에러: {e}")
         return None
 
-    def _open_port_with_timeout(self, timeout=5):
-        """포트 열기..."""    
-        result = [None]     
+    def _open_port(self, timeout=10):
+        """포트 열기 (타임아웃 적용)"""
+        result = [None]
         error = [None]
-        lock = threading.Lock()
-        timed_out = [False]
 
         def _open():
             try:
                 ser = serial.Serial(self.port, self.baudrate, timeout=2)
-                with lock:
-                    if timed_out[0]:
-                        ser.close()
-                    else:
-                        result[0] = ser
+                ser.setDTR(True)
+                ser.setRTS(True)
+                result[0] = ser
             except Exception as e:
                 error[0] = e
 
@@ -51,13 +48,6 @@ class TPG261Reader:
         t.join(timeout=timeout)
 
         if t.is_alive():
-            with lock:
-                timed_out[0] = True
-                if result[0] is not None:
-                    try:
-                        result[0].close()
-                    except:
-                        pass
             print(f"[read] 포트 열기 타임아웃 ({timeout}초)")
             return None
         if error[0]:
@@ -65,34 +55,44 @@ class TPG261Reader:
             return None
         return result[0]
 
+    def _close_port(self):
+        if self._ser is not None:
+            try:
+                self._ser.setDTR(False)
+                self._ser.setRTS(False)
+                self._ser.close()
+            except:
+                pass
+            self._ser = None
+            print("[read] 포트 닫음")
 
+    def _get_port(self):
+        """이미 열려있으면 재사용, 아니면 새로 열기"""
+        if self._ser is not None and self._ser.is_open:
+            return self._ser
+        print("[read] 포트 열기...")
+        time.sleep(1)
+        self._ser = self._open_port()
+        return self._ser
 
     def read_pressure_once(self):
         print(f"[read] 측정 시도 시작 (포트: {self.port})")
         for attempt in range(3):
-            ser = None
             try:
-                print(f"[read] 시도 {attempt+1}/3 - 포트 열기...")
-                ser = self._open_port_with_timeout(timeout=5)
+                ser = self._get_port()
                 if ser is None:
-                    print(f"[read] 시도 {attempt+1}/3 - 포트 열기 실패, 건너뜀")
+                    print(f"[read] 시도 {attempt+1}/3 - 포트 없음, 건너뜀")
                     if attempt < 2:
                         time.sleep(5)
                     continue
 
-                print(f"[read] 포트 열기 성공")
-                ser.setDTR(True)
-                ser.setRTS(True)
-                print(f"[read] DTR/RTS 설정 완료")
-                time.sleep(1)
+                print(f"[read] 시도 {attempt+1}/3 - 포트 열기 성공")
 
-                print(f"[read] ESC 전송...")
                 ser.write(b'\x1B\r\n')
                 time.sleep(0.3)
                 esc_resp = ser.read_all()
                 print(f"[read] ESC 응답: {esc_resp}")
 
-                print(f"[read] PR1 전송...")
                 ser.write(b'PR1\r\n')
                 time.sleep(0.3)
                 resp = ser.read_all()
@@ -115,15 +115,7 @@ class TPG261Reader:
             except Exception as e:
                 print(f"[read] 시도 {attempt+1}/3 예외: {e}")
                 traceback.print_exc()
-            finally:
-                if ser and ser.is_open:
-                    try:
-                        ser.setDTR(False)
-                        ser.setRTS(False)
-                    except:
-                        pass
-                    ser.close()
-                    print(f"[read] 포트 닫음")
+                self._close_port()  # 에러 시 포트 닫고 다음 시도에서 재연결
 
             if attempt < 2:
                 print(f"[read] 5초 대기 후 재시도...")
@@ -182,6 +174,7 @@ class TPG261Reader:
 
     def stop(self):
         self.running = False
+        self._close_port()
         if self.thread:
             self.thread.join()
         print("TPG261 모니터링 종료")
