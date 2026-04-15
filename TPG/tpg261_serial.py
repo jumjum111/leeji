@@ -117,13 +117,12 @@ class TPG261Reader:
         print(f"[read] 3회 모두 실패")
         return None
 
-    def _loop(self):
+      def _loop(self):
         first_read = True
         last_insert_time = 0
 
-        
-            while self.running:
-                try:
+        while self.running:
+            try:
                 print("[루프] 측정 시작...")
                 pressure = self.read_pressure_once()
 
@@ -150,7 +149,7 @@ class TPG261Reader:
                         time.sleep(1)
                         self.seconds_until_next -= 1
 
-        except Exception as e:
+            except Exception as e:
                 print(f"[루프 에러] {e}")
                 traceback.print_exc()
                 print("[루프] 20초 후 재시도...")
@@ -158,6 +157,7 @@ class TPG261Reader:
                 while self.seconds_until_next > 0 and self.running:
                     time.sleep(1)
                     self.seconds_until_next -= 1
+
 
     def start(self):
         if not self.running:
