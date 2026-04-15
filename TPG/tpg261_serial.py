@@ -121,8 +121,9 @@ class TPG261Reader:
         first_read = True
         last_insert_time = 0
 
-        try:
+        
             while self.running:
+                try:
                 print("[루프] 측정 시작...")
                 pressure = self.read_pressure_once()
 
@@ -150,8 +151,13 @@ class TPG261Reader:
                         self.seconds_until_next -= 1
 
         except Exception as e:
-            print(f"[루프 치명적 에러] {e}")
-            traceback.print_exc()
+                print(f"[루프 에러] {e}")
+                traceback.print_exc()
+                print("[루프] 20초 후 재시도...")
+                self.seconds_until_next = 20
+                while self.seconds_until_next > 0 and self.running:
+                    time.sleep(1)
+                    self.seconds_until_next -= 1
 
     def start(self):
         if not self.running:
