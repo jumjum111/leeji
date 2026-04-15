@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPG261 진공도 모니터링</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>TPG261 진공 게이지 실시간 모니터링</h1>
+        </header>
+        
+        <main>
+            <section class="current-status">
+                <h2>현재 진공도</h2>
+                <div class="value-display">
+                    <span id="pressure-val">Loading...</span>
+                    <span class="unit">Mbar</span>
+                </div>
+                <div class="time-display">마지막 업데이트: <span id="last-update">-</span></div>
+                <div class="time-display" style="color:var(--primary-color); font-weight:bold;">다음 측정까지: <span id="countdown">-</span></div>
+            </section>
+
+            <section class="query-section">
+                <h2>데이터 조회 및 다운로드</h2>
+                <div class="controls">
+                    <div class="datetime-picker">
+                        <label for="start-date">시작일:</label>
+                        <input type="date" id="start-date">
+                        <input type="time" id="start-time" value="00:00">
+                    </div>
+                    <div class="datetime-picker">
+                        <label for="end-date">종료일:</label>
+                        <input type="date" id="end-date">
+                        <input type="time" id="end-time" value="23:59">
+                    </div>
+                    <button id="btn-query" class="btn primary">조회</button>
+                    <button id="btn-export" class="btn secondary">엑셀 저장</button>
+                </div>
+            </section>
+
+            <section class="chart-section">
+                <canvas id="pressureChart"></canvas>
+            </section>
+        </main>
+    </div>
+    
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
